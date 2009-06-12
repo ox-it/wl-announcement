@@ -155,13 +155,16 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 
 		// get a site title
 		String title = siteId;
+		String url = ServerConfigurationService.getPortalUrl()+ "/site/"+ siteId;
 		try
 		{
 			Site site = SiteService.getSite(siteId);
 			title = site.getTitle();
+			url = site.getUrl();
 		}
 		catch (Exception ignore)
 		{
+			M_log.warn("Failed to load site: "+ siteId+ " for: "+ event.getResource());
 		}
 
 		// Now build up the message text.
@@ -179,13 +182,9 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 		buf.append("\" " + rb.getString("site_at"));
 		buf.append(" " + ServerConfigurationService.getString("ui.service", "Sakai"));
 		buf.append(" (<a href=\"");
-		buf.append(ServerConfigurationService.getPortalUrl());
-		buf.append("/site/");
-		buf.append(siteId);
+		buf.append(url);
 		buf.append("\">");
-		buf.append(ServerConfigurationService.getPortalUrl());
-		buf.append("/site/");
-		buf.append(siteId);
+		buf.append(url);
 		buf.append("</a>)");
 		buf.append(newline);
 		buf.append(newline);
