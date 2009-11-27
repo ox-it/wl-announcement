@@ -89,6 +89,7 @@ import org.sakaiproject.time.api.Time;
 import org.sakaiproject.time.cover.TimeService;
 import org.sakaiproject.tool.api.Placement;
 import org.sakaiproject.tool.api.Tool;
+import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.tool.cover.ToolManager;
 import org.sakaiproject.user.api.UserNotDefinedException;
@@ -2198,24 +2199,27 @@ public class AnnouncementAction extends PagedResourceActionII
 
 			// navigation bar display control
 			List msgs = (List) sstate.getAttribute(STATE_MESSAGES);
-			for (int i = 0; i < msgs.size(); i++)
+			if (msgs != null)
 			{
-				if (((AnnouncementWrapper) msgs.get(i)).getId().equals(message.getId()))
+				for (int i = 0; i < msgs.size(); i++)
 				{
-					boolean goPT = false;
-					boolean goNT = false;
-					if ((i - 1) >= 0)
+					if (((AnnouncementWrapper) msgs.get(i)).getId().equals(message.getId()))
 					{
-						goPT = true;
-						context.put("prevMsg", msgs.get(i - 1));
+						boolean goPT = false;
+						boolean goNT = false;
+						if ((i - 1) >= 0)
+						{
+							goPT = true;
+							context.put("prevMsg", msgs.get(i - 1));
+						}
+						if ((i + 1) < msgs.size())
+						{
+							goNT = true;
+							context.put("nextMsg", msgs.get(i + 1));
+						}
+						context.put("goPTButton", new Boolean(goPT));
+						context.put("goNTButton", new Boolean(goNT));
 					}
-					if ((i + 1) < msgs.size())
-					{
-						goNT = true;
-						context.put("nextMsg", msgs.get(i + 1));
-					}
-					context.put("goPTButton", new Boolean(goPT));
-					context.put("goNTButton", new Boolean(goNT));
 				}
 			}
 		}
@@ -3365,6 +3369,12 @@ public class AnnouncementAction extends PagedResourceActionII
 
 	public void doAttachments(RunData data, Context context)
 	{
+		AnnouncementActionState actionState = (AnnouncementActionState) getState(context, data, AnnouncementActionState.class);
+		if (actionState.getChannelId().contains("motd")){
+		ToolSession session = SessionManager.getCurrentToolSession();
+        session.setAttribute(FilePickerHelper.FILE_PICKER_ATTACH_LINKS, new Boolean(true).toString());
+		}
+        
 		// get into helper mode with this helper tool
 		startHelper(data.getRequest(), "sakai.filepicker");
 
