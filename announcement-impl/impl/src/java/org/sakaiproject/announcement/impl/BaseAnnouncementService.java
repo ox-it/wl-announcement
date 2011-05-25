@@ -50,6 +50,8 @@ import org.sakaiproject.announcement.api.AnnouncementMessageHeaderEdit;
 import org.sakaiproject.announcement.api.AnnouncementService;
 import org.sakaiproject.authz.cover.FunctionManager;
 import org.sakaiproject.authz.cover.SecurityService;
+import org.sakaiproject.content.api.ContentCopy;
+import org.sakaiproject.content.api.ContentCopyContext;
 import org.sakaiproject.content.api.ContentResource;
 import org.sakaiproject.content.api.ContentHostingService;
 import org.sakaiproject.component.cover.ComponentManager;
@@ -143,6 +145,19 @@ public abstract class BaseAnnouncementService extends BaseMessageService impleme
 	public void setContentHostingService(ContentHostingService service)
 	{
 		contentHostingService = service;
+	}
+	
+	/** Dependency: ContentCopy */
+	private ContentCopy contentCopy;
+	
+	/**
+	 * Dependency: ContentCopy
+	 * 
+	 * @param contentCopy The ContentCopy service.
+	 */
+	public void setContentCopy(ContentCopy contentCopy)
+	{
+		this.contentCopy = contentCopy;
 	}
 	
 	/**********************************************************************************************************************************************************************************************************************************************************
@@ -1117,6 +1132,7 @@ public abstract class BaseAnnouncementService extends BaseMessageService impleme
 				AnnouncementMessage oMessage = null;
 				AnnouncementMessageHeader oMessageHeader = null;
 				AnnouncementMessageEdit nMessage = null;
+				ContentCopyContext context = contentCopy.createCopyContext(fromContext, toContext, true);
 				for (int i = 0; i < oMessageList.size(); i++)
 				{
 					// the "from" message
@@ -1144,7 +1160,11 @@ public abstract class BaseAnnouncementService extends BaseMessageService impleme
 
 						// the "to" message
 						nMessage = (AnnouncementMessageEdit) nChannel.addMessage();
-						nMessage.setBody(oMessage.getBody());
+						
+						// Update references in the message body.
+						String newMessageBody = contentCopy.convertContent(context, oMessage.getBody(), "text/html", null);
+						nMessage.setBody(newMessageBody);
+						
 						// message header
 						AnnouncementMessageHeaderEdit nMessageHeader = (AnnouncementMessageHeaderEdit) nMessage.getHeaderEdit();
 						nMessageHeader.setDate(oMessageHeader.getDate());
@@ -1248,7 +1268,9 @@ public abstract class BaseAnnouncementService extends BaseMessageService impleme
 //						transversalMap.put(oMessage.getReference(), nMessage.getReference());
 					}
 				}
-
+				
+				// Now copy the related resources
+				contentCopy.copyReferences(context);
 			} // if
 			
 			transferSynopticOptions(fromContext, toContext);
