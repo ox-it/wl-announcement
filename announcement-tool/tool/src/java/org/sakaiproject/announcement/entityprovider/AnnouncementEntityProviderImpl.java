@@ -244,9 +244,12 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		da.setSiteTitle(siteTitle);
 		
 		//get attachments
-		List<String> attachments = new ArrayList<String>();
+		List<DecoratedAttachment> attachments = new ArrayList<DecoratedAttachment>();
 		for (Reference attachment : (List<Reference>) a.getHeader().getAttachments()) {
-			attachments.add(attachment.getProperties().getPropertyFormatted(attachment.getProperties().getNamePropDisplayName()));
+			String url = attachment.getUrl();
+			String name = attachment.getProperties().getPropertyFormatted(attachment.getProperties().getNamePropDisplayName());
+			DecoratedAttachment decoratedAttachment = new DecoratedAttachment(name, url);
+			attachments.add(decoratedAttachment);
 		}
 		da.setAttachments(attachments);
 		return da;
@@ -544,6 +547,30 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		return null;
 	}
 
+	public class DecoratedAttachment implements Comparable<Object> {
+
+		private String name;
+		private String url;
+		
+		public DecoratedAttachment(String name, String url) {
+			this.name = name;
+			this.url = url;
+		}
+		
+		public String getName() {
+			return this.name;
+		}
+		
+		public String getUrl() {
+			return this.url;
+		}
+		
+		public int compareTo(Object other) {
+			return this.getUrl().compareTo(((DecoratedAttachment) other).getUrl());
+		}
+		
+	}
+	
 	/**
 	 * Class to hold only the fields that we want to return
 	 */
@@ -553,7 +580,7 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		private String body;
 		private String createdByDisplayName;
 		private Date createdOn;
-		private List<String> attachments;
+		private List<DecoratedAttachment> attachments;
 		private String siteId;
 		private String siteTitle;
 		private String channel;
@@ -609,11 +636,11 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 			this.createdOn = createdOn;
 		}
 
-		public List<String> getAttachments() {
+		public List<DecoratedAttachment> getAttachments() {
 			return attachments;
 		}
 
-		public void setAttachments(List<String> attachments) {
+		public void setAttachments(List<DecoratedAttachment> attachments) {
 			this.attachments = attachments;
 		}
 
