@@ -21,11 +21,13 @@
 
 package org.sakaiproject.announcement.impl;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.sakaiproject.announcement.api.AnnouncementChannel;
 import org.sakaiproject.announcement.api.AnnouncementMessage;
 import org.sakaiproject.announcement.api.AnnouncementMessageEdit;
 import org.sakaiproject.announcement.api.AnnouncementMessageHeader;
@@ -45,18 +47,20 @@ import org.sakaiproject.event.api.NotificationEdit;
 import org.sakaiproject.event.api.NotificationService;
 import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.exception.IdUnusedException;
+import org.sakaiproject.exception.PermissionException;
 import org.sakaiproject.message.api.MessageHeader;
 import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
+import org.sakaiproject.site.api.ToolConfiguration;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.time.api.Time;
 import org.sakaiproject.time.cover.TimeService;
-import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.sakaiproject.user.cover.UserDirectoryService;
 import org.sakaiproject.util.EmailNotification;
 import org.sakaiproject.util.FormattedText;
+import org.sakaiproject.util.MergedList;
 import org.sakaiproject.util.ResourceLoader;
 import org.sakaiproject.util.SiteEmailNotification;
 
@@ -66,18 +70,17 @@ import org.sakaiproject.util.SiteEmailNotification;
  * SiteEmailNotificationAnnc fills the notification message and headers with details from the announcement message that triggered the notification event.
  * </p>
  */
-public class SiteEmailNotificationAnnc extends SiteEmailNotification 
+public class SiteEmailNotificationAnnc extends SiteEmailNotification  
 				implements ScheduledInvocationCommand
 {
 	private static ResourceLoader rb = new ResourceLoader("siteemaanc");
+	private static final String PORTLET_CONFIG_PARM_MERGED_CHANNELS = "mergedAnnouncementChannels";
 
 	/** Our logger. */
 	private static Log M_log = LogFactory.getLog(SiteEmailNotificationAnnc.class);
 
 	private ScheduledInvocationManager scheduledInvocationManager;
-	
-	private ComponentManager componentManager;
-	
+			
 	/**
 	 * Construct.
 	 */
@@ -100,13 +103,6 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 			ScheduledInvocationManager service) 
 	{
 		scheduledInvocationManager = service;
-	}
-
-	/**
-	 * Inject ComponentManager
-	 */
-	public void setComponentManager(ComponentManager componentManager) {
-		this.componentManager = componentManager;
 	}
 
 	/**
@@ -380,24 +376,73 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 	 */
 	protected void addSpecialRecipients(List users, Reference ref)
 	{
-		// include any users who have AnnouncementService.SECURE_ALL_GROUPS and getResourceAbility() in the context
-		String contextRef = SiteService.siteReference(ref.getContext());
+		//SAK-18433 - "if students can see the announcement, they should also be receiving the emails"
+		Site site = null;
+		AnnouncementChannel anncChannel = null;
+		String initMergeList = null;
+		
+		try {
+			site = SiteService.getSite(ref.getContext());
+			String channelRef = org.sakaiproject.announcement.cover.AnnouncementService.channelReference(ref.getContext(), ref.getContainer());
+			anncChannel = org.sakaiproject.announcement.cover.AnnouncementService.getAnnouncementChannel(channelRef);
 
-		// get the list of users who have SECURE_ALL_GROUPS
-		List allGroupUsers = SecurityService.unlockUsers(AnnouncementService.SECURE_ANNC_ALL_GROUPS, contextRef);
+			ToolConfiguration tc=site.getToolForCommonId("sakai.announcements");
+			if (tc!=null){
+				initMergeList = tc.getPlacementConfig().getProperty(PORTLET_CONFIG_PARM_MERGED_CHANNELS);	
+			}
+			
+			MergedList mergedAnnouncementList = new MergedList();
+			String[] channelArrayFromConfigParameterValue = null;	
+			
+			//get array of associated channels: similar logic as found in AnnouncementAction.getMessages() for viewing
+			channelArrayFromConfigParameterValue = mergedAnnouncementList.getChannelReferenceArrayFromDelimitedString(anncChannel.getId(), initMergeList);
+			for(int i=0; i<channelArrayFromConfigParameterValue.length;i++)
+			{
+				String mergedSiteId = org.sakaiproject.announcement.cover.AnnouncementService.getChannel(channelArrayFromConfigParameterValue[i]).getContext();
+				
+				//skip originating site
+				if(!mergedSiteId.equals(site.getId()))
+				{
+					Site mergedSite = SiteService.getSite(mergedSiteId);
+					
+					//similar logic found in SiteEmailNotification.getRecipients()
+					String ability = SiteService.SITE_VISIT;	
+					if (!mergedSite.isPublished())
+					{
+						ability = SiteService.SITE_VISIT_UNPUBLISHED;
+					}
 
-		// filter down by the permission
-		if (getResourceAbility() != null)
+					// get the list of users who can do the right kind of visit
+					List<User> mergedUsers = SecurityService.unlockUsers(ability, mergedSite.getReference());
+
+					// get the list of users who have the appropriate access to the resource
+					if (getResourceAbility() != null)
+					{
+						List<User> mergedUsers2 = SecurityService.unlockUsers(getResourceAbility(),mergedSite.getReference());
+
+						//find intersection
+						mergedUsers.retainAll(mergedUsers2);
+					}
+					
+					//remove duplicates before combining
+					List<User> temp = new ArrayList(mergedUsers);
+					temp.retainAll(users);
+					mergedUsers.removeAll(temp);
+					users.addAll(mergedUsers);		
+				}
+			}
+			
+		}  
+		catch (NullPointerException e)
 		{
-			List allGroupUsers2 = SecurityService.unlockUsers(getResourceAbility(), contextRef);
-			allGroupUsers.retainAll(allGroupUsers2);
+			M_log.error(e.getMessage());
 		}
-
-		// remove any in the list already
-		allGroupUsers.removeAll(users);
-
-		// combine
-		users.addAll(allGroupUsers);
+		catch (IdUnusedException e) {
+			M_log.error(e.getMessage());
+		}
+		catch (PermissionException e) {
+			M_log.error(e.getMessage());
+		}
 	}
 
 	/**
@@ -413,7 +458,7 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 		final Reference ref = EntityManager.newReference(opaqueContext);
 		
 		// needed to access the message
-		enableSecurityAdvisor();
+		enableSecurityAdvisorToGetAnnouncement();
 		
 		final AnnouncementMessage msg = (AnnouncementMessage) ref.getEntity();
 		final AnnouncementMessageHeader hdr = (AnnouncementMessageHeader) msg.getAnnouncementHeader();
@@ -450,13 +495,16 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 	 * Establish a security advisor to allow the "embedded" azg work to occur
 	 * with no need for additional security permissions.
 	 */
-	protected void enableSecurityAdvisor() {
+	protected void enableSecurityAdvisorToGetAnnouncement() {
 		// put in a security advisor so we can do our podcast work without need
 		// of further permissions
 		SecurityService.pushAdvisor(new SecurityAdvisor() {
 			public SecurityAdvice isAllowed(String userId, String function,
 					String reference) {
-				return SecurityAdvice.ALLOWED;
+				if (function.equals(AnnouncementService.SECURE_ANNC_READ))
+					return SecurityAdvice.ALLOWED;
+				else
+					return SecurityAdvice.PASS;
 			}
 		});
 	}

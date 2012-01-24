@@ -1803,8 +1803,11 @@ public abstract class BaseAnnouncementService extends BaseMessageService impleme
 		{
 			M_log.debug("transferCopyEntities: End removing Announcement data");
 		}
-//		transversalMap.putAll(transferCopyEntitiesRefMigrator(fromContext, toContext, ids));
+		transferCopyEntitiesRefMigrator(fromContext, toContext, ids);
 		return null;
 	} 
 
+	public void clearMessagesCache(String channelRef){
+		m_threadLocalManager.set(channelRef + ".msgs", null);
+	}
 }
