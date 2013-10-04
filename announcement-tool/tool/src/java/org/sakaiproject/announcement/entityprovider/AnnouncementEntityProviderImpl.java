@@ -127,7 +127,7 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		
 		//check current user has annc.read permissions for this site, not for public or motd though
 		if(!onlyPublic && !motdView) {
-			if(!securityService.unlock(currentUserId, AnnouncementService.SECURE_ANNC_READ, siteService.siteReference(siteId))) {
+			if(!securityService.unlock(AnnouncementService.SECURE_ANNC_READ, siteService.siteReference(siteId))) {
 				throw new SecurityException("You do not have access to site: " + siteId);
 			}
 		}
@@ -404,16 +404,19 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		if (StringUtils.isBlank(siteId)) {
 			throw new IllegalArgumentException("siteId must be set in order to get the announcements for a site, via the URL /announcement/site/siteId");
 		}
-        
-		boolean onlyPublic = false;
+
+		boolean onlyPublic = true;
 		
 		//check if logged in
 		String currentUserId = sessionManager.getCurrentSessionUserId();
-		if (StringUtils.isBlank(currentUserId)) {
+		boolean isLoggedIn = !StringUtils.isBlank(currentUserId);
+		boolean canReadThemAnyway = securityService.unlock(AnnouncementService.SECURE_ANNC_READ, siteService.siteReference(siteId));
+
+		if (isLoggedIn || canReadThemAnyway) {
 			//not logged in so set flag to just return any public announcements for the site
-			onlyPublic = true;
+			onlyPublic = false;
 		}
-        
+
 		//check this is a valid site
 		if(!siteService.siteExists(siteId)) {
 			throw new EntityNotFoundException("Invalid siteId: " + siteId, siteId);
