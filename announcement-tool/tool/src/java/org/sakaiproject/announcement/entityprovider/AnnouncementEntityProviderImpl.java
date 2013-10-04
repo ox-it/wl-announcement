@@ -220,15 +220,14 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		List<DecoratedAnnouncement> decoratedAnnouncements = new ArrayList<DecoratedAnnouncement>();
 	
 		for (AnnouncementMessage a : announcements) {
-			
-			try {
-				DecoratedAnnouncement da = createDecoratedAnnouncement(a,
-						siteTitle);
-				
-				decoratedAnnouncements.add(da);
-			} catch (Exception e) {
-				//this can throw an exception if we are not logged in, ie public, this is fine so just deal with it and continue
-				log.info("Exception caught processing announcement: " + a.getId() + " for user: " + currentUserId + ". Skipping...");
+			if(announcementService.isMessageViewable(a)) {
+				try {
+					DecoratedAnnouncement da = createDecoratedAnnouncement(a, siteTitle);
+					decoratedAnnouncements.add(da);
+				} catch (Exception e) {
+					//this can throw an exception if we are not logged in, ie public, this is fine so just deal with it and continue
+					log.info("Exception caught processing announcement: " + a.getId() + " for user: " + currentUserId + ". Skipping...");
+				}
 			}
 		}
 		
@@ -239,8 +238,8 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		Collections.reverse(decoratedAnnouncements);
 		
 		//trim to final number, within bounds of list size.
-		if(numberOfAnnouncements > announcements.size()) {
-			numberOfAnnouncements = announcements.size();
+		if(numberOfAnnouncements > decoratedAnnouncements.size()) {
+			numberOfAnnouncements = decoratedAnnouncements.size();
 		}
 		decoratedAnnouncements = decoratedAnnouncements.subList(0, numberOfAnnouncements);
 		
