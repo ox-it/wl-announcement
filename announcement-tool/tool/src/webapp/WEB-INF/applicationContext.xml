@@ -14,7 +14,6 @@
 		<property name="timeService"><ref bean="org.sakaiproject.time.api.TimeService"/></property>
 		<property name="toolManager"><ref bean="org.sakaiproject.tool.api.ToolManager"/></property>
 		<property name="entityManager"><ref bean="org.sakaiproject.entity.api.EntityManager"/></property>
-		<property name="authzGroupService"><ref bean="org.sakaiproject.authz.api.AuthzGroupService"/></property>
 		
 	</bean>
 	

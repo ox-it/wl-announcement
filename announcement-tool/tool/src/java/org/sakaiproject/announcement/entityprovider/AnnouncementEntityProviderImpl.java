@@ -37,9 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.announcement.api.AnnouncementChannel;
 import org.sakaiproject.announcement.api.AnnouncementMessage;
 import org.sakaiproject.announcement.api.AnnouncementService;
-import org.sakaiproject.authz.api.AuthzGroup;
-import org.sakaiproject.authz.api.AuthzGroupService;
-import org.sakaiproject.authz.api.GroupNotDefinedException;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.entity.api.EntityManager;
 import org.sakaiproject.entity.api.EntityPermissionException;
@@ -741,11 +738,6 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 	private ToolManager toolManager;
 	public void setToolManager(ToolManager toolManager) {
 		this.toolManager = toolManager;
-	}
-
-	private AuthzGroupService authzGroupService;
-	public void setAuthzGroupService(AuthzGroupService authzGroupService) {
-		this.authzGroupService = authzGroupService;
 	}
 
 }
