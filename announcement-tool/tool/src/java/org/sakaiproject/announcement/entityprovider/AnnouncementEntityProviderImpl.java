@@ -100,7 +100,10 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 
 	
 	/**
-	 * Get the list of announcements for a site (or user site, or !site for motd)
+	 * Get the list of announcements for a site (or user site, or !site for motd).
+	 * This is aimed to providing a list of announcements similar to those that the synoptic announcement
+	 * tool shows. It doesn't show announcements that are outside their date range even if you
+	 * have permission to see them (eg from being a maintainer in the site).
 	 *
 	 * @param siteId - siteId requested, or user site, or !site for motd.
 	 * @param params - the raw URL params that were sent, for processing.
