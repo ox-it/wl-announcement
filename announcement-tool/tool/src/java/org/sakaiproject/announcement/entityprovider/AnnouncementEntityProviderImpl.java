@@ -97,7 +97,10 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 
 	
 	/**
-	 * Get the list of announcements for a site (or user site, or !site for motd)
+	 * Get the list of announcements for a site (or user site, or !site for motd).
+	 * This is aimed to providing a list of announcements similar to those that the synoptic announcement
+	 * tool shows. It doesn't show announcements that are outside their date range even if you
+	 * have permission to see them (eg from being a maintainer in the site).
 	 *
 	 * @param siteId - siteId requested, or user site, or !site for motd.
 	 * @param params - the raw URL params that were sent, for processing.
@@ -217,15 +220,14 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		List<DecoratedAnnouncement> decoratedAnnouncements = new ArrayList<DecoratedAnnouncement>();
 	
 		for (AnnouncementMessage a : announcements) {
-			
-			try {
-				DecoratedAnnouncement da = createDecoratedAnnouncement(a,
-						siteTitle);
-				
-				decoratedAnnouncements.add(da);
-			} catch (Exception e) {
-				//this can throw an exception if we are not logged in, ie public, this is fine so just deal with it and continue
-				log.info("Exception caught processing announcement: " + a.getId() + " for user: " + currentUserId + ". Skipping...");
+			if(announcementService.isMessageViewable(a)) {
+				try {
+					DecoratedAnnouncement da = createDecoratedAnnouncement(a, siteTitle);
+					decoratedAnnouncements.add(da);
+				} catch (Exception e) {
+					//this can throw an exception if we are not logged in, ie public, this is fine so just deal with it and continue
+					log.info("Exception caught processing announcement: " + a.getId() + " for user: " + currentUserId + ". Skipping...");
+				}
 			}
 		}
 		
@@ -236,8 +238,8 @@ public class AnnouncementEntityProviderImpl extends AbstractEntityProvider imple
 		Collections.reverse(decoratedAnnouncements);
 		
 		//trim to final number, within bounds of list size.
-		if(numberOfAnnouncements > announcements.size()) {
-			numberOfAnnouncements = announcements.size();
+		if(numberOfAnnouncements > decoratedAnnouncements.size()) {
+			numberOfAnnouncements = decoratedAnnouncements.size();
 		}
 		decoratedAnnouncements = decoratedAnnouncements.subList(0, numberOfAnnouncements);
 		
