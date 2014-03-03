@@ -560,5 +560,36 @@ function resizeFrame(){
 				}
 			}
 		}
+
+		function updateEmailDropdownOptions() {
+			var defaultText = "$tlang.getString("revise.notify_high")";
+			var groupsText  = "$tlang.getString("revise.notify_high_groups")";
+
+			var options = document.getElementById('notify').children;
+			for (var i = 0; i < options.length; i++) {
+				if (options[i].text == defaultText || options[i].text == groupsText) {
+					var highOption = options[i];
+					break;
+				}
+			}
+
+			if (theAnnouncementIsForGroups()) {
+				highOption.text = groupsText;
+			} else {
+				highOption.text = defaultText;
+			}
+		}
+
+		function theAnnouncementIsForGroups() {
+			var isForGroups = false;
+			var recipientOptions = document.getElementsByName('announceTo');
+			for (var i = 0; i < recipientOptions.length; i++) {
+				if (recipientOptions[i].checked && recipientOptions[i].value == 'groups') {
+					isForGroups = true;
+					break;
+				}
+			}
+			return isForGroups;
+		}
 	-->
 </script>
