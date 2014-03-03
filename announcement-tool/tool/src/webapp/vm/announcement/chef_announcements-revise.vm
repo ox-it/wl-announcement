@@ -152,7 +152,9 @@ function resizeFrame(){
 				
 
 			}
-		});	
+		});
+
+		updateEmailDropdownOptions();
 		
 	});
 </script>	
