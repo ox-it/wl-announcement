@@ -170,11 +170,11 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 		// Now build up the message text.
 		if (AnnouncementService.SECURE_ANNC_ADD.equals(event.getEvent()))
 		{
-			buf.append(rb.getFormattedMessage("noti.header.add", new Object[]{title, url}));
+			buf.append(rb.getFormattedMessage("noti.header.add", new Object[]{title, ServerConfigurationService.getString("ui.service", "Sakai"), url}));
 		}
 		else
 		{
-			buf.append(rb.getFormattedMessage("noti.header.update", new Object[]{title, url}));
+			buf.append(rb.getFormattedMessage("noti.header.update", new Object[]{title, ServerConfigurationService.getString("ui.service", "Sakai"), url}));
 		}
 		buf.append(" " + rb.getString("at_date") + " ");
 		buf.append(hdr.getDate().toStringLocalFull());
@@ -482,25 +482,27 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 
 		// get a site title
 		String title = siteId;
+		String url = ServerConfigurationService.getPortalUrl()+ "/site/"+ siteId;
 		try
 		{
 			Site site = SiteService.getSite(siteId);
 			title = site.getTitle();
+			url = site.getUrl(); // Might have a better URL.
 		}
 		catch (Exception ignore)
 		{
-			
+			M_log.warn("Failed to load site: "+ siteId+ " for: "+ event.getResource());
 		}
 
 		// Now build up the message text.
 		if (AnnouncementService.SECURE_ANNC_ADD.equals(event.getEvent()))
 		{
-			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.add", new Object[]{title,ServerConfigurationService.getString("ui.service", "Sakai"),ServerConfigurationService.getPortalUrl(), siteId})));
+			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.add", new Object[]{title,ServerConfigurationService.getString("ui.service", "Sakai"), url})));
 
 		}
 		else
 		{
-			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.update", new Object[]{title,ServerConfigurationService.getString("ui.service", "Sakai"),ServerConfigurationService.getPortalUrl(), siteId})));
+			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.update", new Object[]{title, ServerConfigurationService.getString("ui.service", "Sakai"), url})));
 
 		}
 		buf.append(newline);
