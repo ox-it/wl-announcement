@@ -1738,7 +1738,7 @@ public class AnnouncementAction extends PagedResourceActionII
 		{
 			AnnouncementMessage aMessage = (AnnouncementMessage) messageList.get(i);
 			String pubview = aMessage.getProperties().getProperty(ResourceProperties.PROP_PUBVIEW);
-			if (pubview != null && Boolean.valueOf(pubview).booleanValue())
+			if ((site.isPubView()) || (pubview != null && Boolean.valueOf(pubview).booleanValue()))
 			{
 				// public announcements
 				rv.add(aMessage);
