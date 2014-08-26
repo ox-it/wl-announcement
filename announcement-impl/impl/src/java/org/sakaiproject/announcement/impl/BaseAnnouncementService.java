@@ -931,7 +931,7 @@ public abstract class BaseAnnouncementService extends BaseMessage implements Ann
 				M_log.warn(this+".printAnnouncementRss invalid request "+rssRef.getContext());
 				return;
 			}
-			List anncList = anncChan.getMessagesPublic(null,false);
+			List anncList = anncChan.getMessagesPublic(null,false, site);
 			
 			for ( Iterator it=anncList.iterator(); it.hasNext(); )
 			{
