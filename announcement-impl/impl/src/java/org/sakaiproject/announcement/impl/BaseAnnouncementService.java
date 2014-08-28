@@ -96,7 +96,6 @@ import org.sakaiproject.time.api.Time;
 import org.sakaiproject.time.api.TimeService;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.api.ToolManager;
-import org.sakaiproject.user.cover.UserDirectoryService;
 import org.sakaiproject.util.MergedList;
 import org.sakaiproject.util.ResourceLoader;
 import org.sakaiproject.util.StringUtil;
@@ -932,8 +931,7 @@ public abstract class BaseAnnouncementService extends BaseMessage implements Ann
 				M_log.warn(this+".printAnnouncementRss invalid request "+rssRef.getContext());
 				return;
 			}
-			boolean isChannelPublic = m_securityService.unlock(UserDirectoryService.getAnonymousUser(), AnnouncementService.SECURE_ANNC_READ, rssRef.getReference());
-			List anncList = anncChan.getMessagesPublic(null,false, isChannelPublic);
+			List anncList = anncChan.getMessagesPublic(null,false);
 			for ( Iterator it=anncList.iterator(); it.hasNext(); )
 			{
 				AnnouncementMessage msg = (AnnouncementMessage)it.next();
