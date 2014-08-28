@@ -932,7 +932,6 @@ public abstract class BaseAnnouncementService extends BaseMessage implements Ann
 				return;
 			}
 			List anncList = anncChan.getMessagesPublic(null,false);
-			
 			for ( Iterator it=anncList.iterator(); it.hasNext(); )
 			{
 				AnnouncementMessage msg = (AnnouncementMessage)it.next();
