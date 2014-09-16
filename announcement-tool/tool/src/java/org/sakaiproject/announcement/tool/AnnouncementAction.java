@@ -35,6 +35,8 @@ import java.util.Properties;
 import java.util.Stack;
 import java.util.Vector;
 import java.text.Collator;
+import java.text.ParseException;
+import java.text.RuleBasedCollator;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -248,6 +250,10 @@ public class AnnouncementAction extends PagedResourceActionII
    private SecurityService m_securityService = null;
    
    private EntityBroker entityBroker;
+
+   private RuleBasedCollator collator_ini = (RuleBasedCollator)Collator.getInstance();
+
+   private Collator collator = Collator.getInstance();
    
    private static final String DEFAULT_TEMPLATE="announcement/chef_announcements";
    
@@ -281,7 +287,7 @@ public class AnnouncementAction extends PagedResourceActionII
 					if (userId.equals(SessionManager.getCurrentSessionUserId()) && "annc.read".equals(function) && finalChannelReference.equals(reference)) {
 						return SecurityAdvice.ALLOWED;
 					} else {
-						return SecurityAdvice.NOT_ALLOWED;
+						return SecurityAdvice.PASS;
 					}
 				}
 			};
@@ -381,7 +387,7 @@ public class AnnouncementAction extends PagedResourceActionII
 					if (SessionManager.getCurrentSessionUserId().equals(userId) && "annc.read".equals(function) && reference.equals(finalRef)) {
 						return SecurityAdvice.ALLOWED;
 					} else {
-						return SecurityAdvice.NOT_ALLOWED;
+						return SecurityAdvice.PASS;
 					}
 				}
 			};
@@ -1167,14 +1173,11 @@ public class AnnouncementAction extends PagedResourceActionII
 		}
 				
 		//Check for MOTD, if yes then is not ok to show permissions button
-		if(placement!= null && ("MOTD".equals(placement.getTitle()) && placement.getId().contains("admin"))) {
-			buildMenu(portlet, context, rundata, state, menu_new, menu_delete, menu_revise, this.isOkToShowMergeButton(statusName),
-					false, this.isOkToShowOptionsButton(statusName), displayOptions);
-		}
-		else{
-		buildMenu(portlet, context, rundata, state, menu_new, menu_delete, menu_revise, this.isOkToShowMergeButton(statusName),
-				this.isOkToShowPermissionsButton(statusName), this.isOkToShowOptionsButton(statusName), displayOptions);
-		}
+		boolean showMerge = !isMotd(channelId) && isOkToShowMergeButton(statusName);
+		boolean showPermissions = !isMotd(channelId) && isOkToShowPermissionsButton(statusName);
+		boolean showOptions = this.isOkToShowOptionsButton(statusName);
+		buildMenu(portlet, context, rundata, state, menu_new, menu_delete, menu_revise, showMerge,
+					showPermissions, showOptions, displayOptions);
 			
 		// added by zqian for toolbar
 		context.put("allow_new", Boolean.valueOf(menu_new));
@@ -1276,7 +1279,7 @@ public class AnnouncementAction extends PagedResourceActionII
 	
 		context.put("showMessagesList", showMessagesList.iterator());
 		context.put("messageListVector", showMessagesList);
-
+		context.put("showMessagesList2", showMessagesList.iterator());
 		context.put("totalPageNumber", sstate.getAttribute(STATE_TOTAL_PAGENUMBER));
 		context.put("formPageNumber", FORM_PAGE_NUMBER);
 		context.put("prev_page_exists", sstate.getAttribute(STATE_PREV_PAGE_EXISTS));
@@ -1626,7 +1629,7 @@ public class AnnouncementAction extends PagedResourceActionII
 					if (SessionManager.getCurrentSessionUserId().equals(userId) && "annc.read".equals(function) && reference.equals(finalChannelReference)) {
 						return SecurityAdvice.ALLOWED;
 					} else {
-						return SecurityAdvice.NOT_ALLOWED;
+						return SecurityAdvice.PASS;
 					}
 				}
 			};
@@ -2129,7 +2132,7 @@ public class AnnouncementAction extends PagedResourceActionII
 			context.put("pubviewset", isChannelPublic(channelId));
 			Placement placement = ToolManager.getCurrentPlacement();
 			//SAK-19516, default motd to pubview so it shows up in rss
-			context.put("motd",(placement!= null && ("MOTD".equals(placement.getTitle()) && placement.getId().contains("admin"))) ? Boolean.TRUE : Boolean.FALSE);
+			context.put("motd", isMotd(channelId));
 			
 			// output the sstate saved public view options
 			final boolean pubview = Boolean.valueOf((String) sstate.getAttribute(SSTATE_PUBLICVIEW_VALUE)).booleanValue();
@@ -2358,7 +2361,7 @@ public class AnnouncementAction extends PagedResourceActionII
 						&& (finalMessageReference.equals(reference) || finalChannelReference.equals(reference))) {
 						return SecurityAdvice.ALLOWED;
 					} else {
-						return SecurityAdvice.NOT_ALLOWED;
+						return SecurityAdvice.PASS;
 					}
 				}
 			};
@@ -2726,6 +2729,9 @@ public class AnnouncementAction extends PagedResourceActionII
 	 */
 	public void doAnnouncement_form(RunData data, Context context)
 	{
+		if (!"POST".equals(data.getRequest().getMethod())) {
+			return;
+		}
 
 		ParameterParser params = data.getParameters();
 
@@ -3082,7 +3088,7 @@ public class AnnouncementAction extends PagedResourceActionII
 				ParameterParser params = rundata.getParameters();
 				
 				// get release/retract dates
-				final String specify = params.getString(SPECIFY_DATES);
+				final String specify = params.getString(HIDDEN);
 				final boolean use_start_date = params.getBoolean("use_start_date");
 				final boolean use_end_date = params.getBoolean("use_end_date");
 				Time releaseDate = null;
@@ -3157,8 +3163,9 @@ public class AnnouncementAction extends PagedResourceActionII
 				
 				//announceTo
 				Placement placement = ToolManager.getCurrentPlacement();
-				//SAK-19516, default motd to pubview so it shows up in rss, motd will fail below try block
-				if(placement!= null && ("MOTD".equals(placement.getTitle()) && placement.getId().contains("admin")))
+				// If the channel into which we are saving is public mark the item as public so it shows up in the
+				// RSS feed.
+				if(isChannelPublic(channelId))
 				{
 					msg.getPropertiesEdit().addProperty(ResourceProperties.PROP_PUBVIEW, Boolean.TRUE.toString());
 					header.clearGroupAccess();
@@ -3809,7 +3816,7 @@ public class AnnouncementAction extends PagedResourceActionII
 	public void doAttachments(RunData data, Context context)
 	{
 		AnnouncementActionState actionState = (AnnouncementActionState) getState(context, data, AnnouncementActionState.class);
-		if (actionState.getChannelId().contains("motd")){  //! message of the day 
+		if (isMotd(actionState.getChannelId())){
 			ToolSession session = SessionManager.getCurrentToolSession();
 			session.setAttribute(FilePickerHelper.FILE_PICKER_ATTACH_LINKS, new Boolean(true).toString());
 		}
@@ -4044,7 +4051,16 @@ public class AnnouncementAction extends PagedResourceActionII
 	{
 		// the criteria
 		String m_criteria = null;
-
+		{
+			try
+			{
+				collator = new RuleBasedCollator(collator_ini.getRules().replaceAll("<'\u005f'", "<' '<'\u005f'"));;
+			}
+			catch (ParseException e)
+			{
+				M_log.warn(this + " Cannot init RuleBasedCollator. Will use the default Collator instead.", e);
+			}
+		}
 		// the criteria - asc
 		boolean m_asc = true;
 
@@ -4079,8 +4095,9 @@ public class AnnouncementAction extends PagedResourceActionII
 			if (m_criteria.equals(SORT_SUBJECT))
 			{
 				// sorted by the discussion message subject
-				result = Collator.getInstance().compare(((AnnouncementMessage) o1).getAnnouncementHeader().getSubject(),
-						((AnnouncementMessage) o2).getAnnouncementHeader().getSubject());
+				result = collator.compare(((AnnouncementMessage) o1).getAnnouncementHeader().getSubject(),
+						((AnnouncementMessage) o2).getAnnouncementHeader().getSubject());				
+
 			}
 			else if (m_criteria.equals(SORT_DATE))
 			{
@@ -4235,13 +4252,13 @@ public class AnnouncementAction extends PagedResourceActionII
 			else if (m_criteria.equals(SORT_FROM))
 			{
 				// sorted by the discussion message subject
-				result = Collator.getInstance().compare(((AnnouncementMessage) o1).getAnnouncementHeader().getFrom().getSortName(),
-						((AnnouncementMessage) o2).getAnnouncementHeader().getFrom().getSortName());
+				result = collator.compare(((AnnouncementMessage) o1).getAnnouncementHeader().getFrom().getSortName(),
+				((AnnouncementMessage) o2).getAnnouncementHeader().getFrom().getSortName());
 			}
 			else if (m_criteria.equals(SORT_CHANNEL))
 			{
 				// sorted by the channel name.
-				result = Collator.getInstance().compare(((AnnouncementWrapper) o1).getChannelDisplayName(),
+				result = collator.compare(((AnnouncementWrapper) o1).getChannelDisplayName(),
 						((AnnouncementWrapper) o2).getChannelDisplayName());
 			}
 			else if (m_criteria.equals(SORT_PUBLIC))
@@ -4251,21 +4268,21 @@ public class AnnouncementAction extends PagedResourceActionII
 				if (factor1 == null) factor1 = "false";
 				String factor2 = ((AnnouncementMessage) o2).getProperties().getProperty(ResourceProperties.PROP_PUBVIEW);
 				if (factor2 == null) factor2 = "false";
-				result = Collator.getInstance().compare(factor1,factor2);
+				result = collator.compare(factor1,factor2);
 			}
 			else if (m_criteria.equals(SORT_FOR))
 			{
 				// sorted by the public view attribute
 				String factor1 = ((AnnouncementWrapper) o1).getRange();
 				String factor2 = ((AnnouncementWrapper) o2).getRange();
-				result = Collator.getInstance().compare(factor1,factor2);
+				result = collator.compare(factor1,factor2);
 			}
 			else if (m_criteria.equals(SORT_GROUPTITLE))
 			{
 				// sorted by the group title
 				String factor1 = ((Group) o1).getTitle();
 				String factor2 = ((Group) o2).getTitle();
-				result = Collator.getInstance().compare(factor1,factor2);
+				result = collator.compare(factor1,factor2);
 			}
 			else if (m_criteria.equals(SORT_GROUPDESCRIPTION))
 			{
@@ -4280,7 +4297,7 @@ public class AnnouncementAction extends PagedResourceActionII
 				{
 					factor2 = "";
 				}
-				result = Collator.getInstance().compare(factor1,factor2);
+				result = collator.compare(factor1,factor2);
 			}
 
 			// sort ascending or descending
@@ -5044,7 +5061,7 @@ public class AnnouncementAction extends PagedResourceActionII
 	protected boolean notificationEnabled(AnnouncementActionState state)
 	{
 		// if it is motd, it does not send notification to user, hence the notification option is disabled. SAK-4559
-		if (state.getChannelId().contains("motd"))
+		if (isMotd(state.getChannelId()))
 		{
 				return false;
 		}
@@ -5324,6 +5341,15 @@ public class AnnouncementAction extends PagedResourceActionII
 	    final ResourceProperties props = prefs.getProperties(TABS_EXCLUDED_PREFS);
 	    final List<String> l = props.getPropertyList(TAB_EXCLUDED_SITES);
 	    return l;
+	}
+
+	/**
+	 * Is the channel the message of the day.
+	 * @param channelId The channel ID.
+	 * @return <code>true</code> if the channel is the Message Of The Day (MOTD).
+	 */
+	private boolean isMotd(String channelId) {
+		return channelId.endsWith("motd");
 	}
 
 }

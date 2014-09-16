@@ -499,31 +499,18 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 		// Now build up the message text.
 		if (AnnouncementService.SECURE_ANNC_ADD.equals(event.getEvent()))
 		{
-			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.add", new Object[]{title,ServerConfigurationService.getString("ui.service", "Sakai"), url})));
+			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.add", new Object[]{title,url})));
 
 		}
 		else
 		{
-			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.update", new Object[]{title, ServerConfigurationService.getString("ui.service", "Sakai"), url})));
-
+			buf.append(FormattedText.convertFormattedTextToPlaintext(rb.getFormattedMessage("noti.header.update", new Object[]{title,url})));
 		}
-		buf.append(newline);
-		buf.append(newline);
-		buf.append(newline);
-		buf.append(rb.getString("Subject"));
-		buf.append(hdr.getSubject());
-		//buf.append(rb.getString("Subject") + ": "); buf.append(hdr.getSubject());
-		buf.append(newline);
-		buf.append(newline);
-		buf.append(rb.getString("Group"));
-		buf.append(getAnnouncementGroup(msg));
-		buf.append(newline);
-		buf.append(newline);
-		buf.append(rb.getString("Message"));
-		buf.append(newline);
+		
+        buf.append(" " + rb.getString("at_date") + " ");
+        buf.append(hdr.getDate().toStringLocalFull());
 		buf.append(newline);
 		buf.append(FormattedText.convertFormattedTextToPlaintext(msg.getBody()));
-		buf.append(newline);
 		buf.append(newline);
 
 		// add any attachments
