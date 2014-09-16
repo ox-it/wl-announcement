@@ -179,6 +179,8 @@ public class SiteEmailNotificationAnnc extends SiteEmailNotification
 		buf.append(" " + rb.getString("at_date") + " ");
 		buf.append(hdr.getDate().toStringLocalFull());
 		buf.append(newline);
+		buf.append(msg.getBody());
+		buf.append(newline);
 
 		// add any attachments
 		List<Reference> attachments = hdr.getAttachments();
