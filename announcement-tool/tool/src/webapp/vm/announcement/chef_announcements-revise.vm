@@ -497,21 +497,27 @@ function resizeFrame(){
 		}
 
 		function updateEmailDropdownOptions() {
-			var defaultText = "$tlang.getString("revise.notify_high")";
-			var groupsText  = "$tlang.getString("revise.notify_high_groups")";
+			var defaultHighText = "$tlang.getString("revise.notify_high")";
+			var groupsHighText  = "$tlang.getString("revise.notify_high_groups")";
+			var defaultLowText = "$tlang.getString("revise.notify_low")";
+			var groupsLowText = "$tlang.getString("revise.notify_low_groups")";
 
 			var options = document.getElementById('notify').children;
 			for (var i = 0; i < options.length; i++) {
-				if (options[i].text == defaultText || options[i].text == groupsText) {
+				if (options[i].text == defaultHighText || options[i].text == groupsHighText) {
 					var highOption = options[i];
-					break;
+				}
+				if (options[i].text == defaultLowText || options[i].text == groupsLowText) {
+					var lowOption = options[i];
 				}
 			}
 
 			if (theAnnouncementIsForGroups()) {
-				highOption.text = groupsText;
+				highOption.text = groupsHighText;
+				lowOption.text = groupsLowText;
 			} else {
-				highOption.text = defaultText;
+				highOption.text = defaultHighText;
+				lowOption.text = defaultLowText;
 			}
 		}
 
